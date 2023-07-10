@@ -1,0 +1,14 @@
+---
+# Days until expiration to warn for
+threshold: 14
+
+smtp:
+  from: cert-monitor@localhost
+  to:
+    - someone@example.com
+  server: smtp.example.com
+  port: 25
+
+domains:
+  - one.com
+  - google.com
