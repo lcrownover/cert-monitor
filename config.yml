@@ -3,7 +3,7 @@ threshold: 14
 
 smtp:
   from: cert-monitor@toolbox.talapas.uoregon.edu
-  to: 
+  to:
     - lcrown@uoregon.edu
   server: smtp.uoregon.edu
   port: 25
