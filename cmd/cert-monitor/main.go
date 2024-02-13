@@ -15,6 +15,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const VERSION = "0.1.4"
+
 type Config struct {
 	SMTP      SMTPConfig `yaml:"smtp,omitempty"`
 	Domains   []string   `yaml:"domains,omitempty"`
@@ -51,7 +53,13 @@ func main() {
 	var debugFlag = flag.Bool("debug", false, "show debug output")
 	var jsonFlag = flag.Bool("json", false, "format output in json")
 	var printFlag = flag.Bool("print", false, "print to stdout instead of email")
+	var versionFlag = flag.Bool("version", false, "print version and exit")
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Println(VERSION)
+		os.Exit(0)
+	}
 
 	// Configure logging
 	var programLevel = new(slog.LevelVar)
