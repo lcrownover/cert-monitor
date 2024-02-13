@@ -69,7 +69,11 @@ func main() {
 	}
 
 	// Load config and store in ctx
-	configFilePath := getConfigPath(*configFlag)
+	configFilePath, err := getConfigPath(*configFlag)
+	if err != nil {
+		slog.Error("no config file path provided by -config flag or CERT_MONITOR_CONFIG_PATH environment variable")
+		os.Exit(1)
+	}
 	d, err := os.ReadFile(configFilePath)
 	if err != nil {
 		slog.Error(fmt.Sprintf("failed to read config file: %s\n", configFilePath))
@@ -189,22 +193,19 @@ func isDateWithinDays(ctx context.Context, targetDate string, days int) bool {
 	return today.AddDate(0, 0, days).After(expires)
 }
 
-func getConfigPath(configFlag string) string {
-	// We look at 3 places for the config file and use the first defined
-	// 1. --config flag
+func getConfigPath(configFlag string) (string, error) {
+	// We look at 2 places for the config file and use the first defined
+	// 1. -config flag
 	// 2. CERT_MONITOR_CONFIG_PATH env var
-	// 3. /etc/cert-monitor/config.yml
-
-	var defaultConfigFilePath = "/etc/cert-monitor/config.yml"
 
 	if configFlag != "" {
-		return configFlag
+		return configFlag, nil
 	}
 
 	configFilePath, found := os.LookupEnv("CERT_MONITOR_CONFIG_PATH")
 	if found {
-		return configFilePath
+		return configFilePath, nil
 	}
 
-	return defaultConfigFilePath
+	return "", fmt.Errorf("config file not found")
 }
