@@ -29,6 +29,7 @@ type SMTPConfig struct {
 }
 
 type Domain struct {
+	NameRef        string
 	CommonName     string
 	DNSNames       []string
 	Expires        string
@@ -81,7 +82,7 @@ func main() {
 	}
 	ctx = context.WithValue(ctx, configKey{}, &config)
 
-	// check each domain and email if necessary
+	// build the domain information
 	var domains []Domain
 	for _, cfgDomain := range config.Domains {
 		slog.Debug(fmt.Sprintf("checking domain: %s", cfgDomain))
@@ -94,10 +95,15 @@ func main() {
 		slog.Debug("domain", "domain", domain)
 
 		domains = append(domains, *domain)
+	}
 
-		if domain.IsExpiringSoon && !*printFlag {
-			subject := fmt.Sprintf("certificate expiration warning: %s", cfgDomain)
-			sendEmail(ctx, subject, domain.Summary)
+	// one email per domain that is expiring soon
+	if !*summaryFlag && !*printFlag {
+		for _, domain := range domains {
+			if domain.IsExpiringSoon {
+				subject := fmt.Sprintf("certificate expiration warning: %s", domain.NameRef)
+				sendEmail(ctx, subject, domain.Summary)
+			}
 		}
 	}
 
@@ -120,7 +126,7 @@ func main() {
 
 func getDomain(ctx context.Context, domain string) (*Domain, error) {
 	config := ctx.Value(configKey{}).(*Config)
-	d := &Domain{}
+	d := &Domain{NameRef: domain}
 	summary := []string{}
 
 	tlsConfig := &tls.Config{
@@ -159,16 +165,16 @@ func sendEmail(ctx context.Context, subject string, contents string) {
 	config := ctx.Value(configKey{}).(*Config)
 	m := gomail.NewMessage()
 	m.SetHeader("From", config.SMTP.From)
-    m.SetHeader("To", config.SMTP.To...)
-    m.SetHeader("Subject", subject)
-    m.SetBody("text/plain", contents)
+	m.SetHeader("To", config.SMTP.To...)
+	m.SetHeader("Subject", subject)
+	m.SetBody("text/plain", contents)
 	slog.Debug("sending email", "subject", subject, "contents", contents)
-    d := gomail.NewDialer(config.SMTP.Server, config.SMTP.Port, "", "")
-    d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	d := gomail.NewDialer(config.SMTP.Server, config.SMTP.Port, "", "")
+	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 
-    if err := d.DialAndSend(m); err != nil {
-        slog.Error("failed to send email", "error", err.Error())
-    }
+	if err := d.DialAndSend(m); err != nil {
+		slog.Error("failed to send email", "error", err.Error())
+	}
 }
 
 func isDateWithinDays(ctx context.Context, targetDate string, days int) bool {
